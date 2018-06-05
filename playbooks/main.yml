@@ -1,0 +1,12 @@
+---
+- name: Main Playbook
+  hosts: ci-server
+  vars_files: 
+    - plugin_list_jenkins.yml
+  connection: local
+  become: yes
+  become_method: sudo
+- import_playbook: base-configure.yml
+- import_playbook: apache-install.yml
+- import_playbook: jenkins-install.yml
+- import_playbook: composer-install.yml

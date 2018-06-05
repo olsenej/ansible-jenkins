@@ -1,0 +1,93 @@
+- name: Install Apache
+  hosts: ci-server
+  vars_files: 
+    - ../vault/certs/davenport.edu.yml
+  connection: local
+  become: yes
+  become_method: sudo
+  tags: first_run
+  tasks:
+
+  - name: Latest Apache
+    yum: 
+      name: httpd 
+      state: latest
+
+  - name: Install mod_ssl
+    yum:
+      name: mod_ssl
+      state: latest
+
+  - name: Install mod_auth_cas
+    yum:
+      name: mod_auth_cas
+      state: latest
+
+  - name: Create jenkins.conf vhost
+    template:
+      src: jenkins.conf.j2
+      dest: /etc/httpd/conf.d/jenkins.conf
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Create DU httpd.conf
+    template:
+      src: httpd.conf.j2
+      dest: /etc/httpd/conf/httpd.conf
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Create SSL conf
+    template:
+      src: ssl.conf.j2
+      dest: /etc/httpd/conf.d/ssl.conf
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Load SSL module
+    template:
+      src: 00-ssl.conf.j2
+      dest: /etc/httpd/conf.modules.d/00-ssl.conf
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Add davenport.edu crt
+    tags: ssl_certs
+    template:
+      src: davenport.edu.crt.j2
+      dest: /etc/pki/tls/certs/davenport.edu.crt
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Add davenport.edu key
+    tags: ssl_certs
+    copy:
+      content: "{{ private_ssl_key_content }}"
+      dest: /etc/pki/tls/private/davenport.edu.key
+      owner: root
+      group: root
+      mode: "u=rw,g=r,o="
+    #with_items:
+    #  - "{{ certificates }}"
+
+  - name: Add cert chain file
+    tags: ssl_certs
+    template:
+      src: gd_bundle-g2-g1.crt.j2
+      dest: /etc/pki/tls/certs/gd_bundle-g2-g1.crt
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Start and enable Apache
+    systemd:
+      name: httpd
+      state: started
+      enabled: True
+      masked: no
+      

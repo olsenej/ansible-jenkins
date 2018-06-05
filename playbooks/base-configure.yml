@@ -1,0 +1,76 @@
+- name: Configure server
+  hosts: ci-server
+  connection: local
+  become: yes
+  become_method: sudo
+  tags: first_run
+  tasks:
+    - name: Yum update
+      yum: name=* state=latest
+
+    - name: Add repository
+      yum_repository:
+        name: epel
+        description: EPEL YUM repo
+        baseurl: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+    - name: Add optional repos
+      rhsm_repository:
+        name: rhel-*-optional-rpms
+        state: enabled
+
+    - name: Add extra repos
+      rhsm_repository:
+        name: rhel-*-extras-rpms
+        state: enabled
+
+    - name: Install Dependencies
+      yum: 
+        name:
+        - git
+        - java-1.8.0-openjdk.x86_64
+        - wget
+        - php
+        - httpd
+
+    - name: Allow port 8080
+      iptables:
+        chain: IN_public_allow
+        protocol: tcp
+        destination_port: 8080
+        match: conntrack
+        ctstate: NEW
+        jump: ACCEPT
+        comment: Jenkins port
+
+    - name: Allow port 80
+      iptables:
+        chain: IN_public_allow
+        protocol: tcp
+        destination_port: 80
+        match: conntrack
+        ctstate: NEW
+        jump: ACCEPT
+        comment: Apache 80
+
+    - name: Allow port 443
+      iptables:
+        chain: IN_public_allow
+        protocol: tcp
+        destination_port: 443
+        match: conntrack
+        ctstate: NEW
+        jump: ACCEPT
+        comment: Apache 443
+
+    - name: Allow Proxy Pass to work
+      shell: setsebool -P httpd_can_network_connect 1
+
+    - name: Create Jenkins User
+      user: 
+        name: jenkins
+        comment: jenkins user
+        shell: /bin/bash
+        home: /var/lib/jenkins
+        generate_ssh_key: yes
+        ssh_key_file: .ssh/id_rsa

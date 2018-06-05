@@ -1,0 +1,38 @@
+<VirtualHost *:80>
+        RewriteEngine On
+        RewriteCond %{HTTPS} off
+        RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI}
+</VirtualHost>
+
+<VirtualHost *:443>
+        ServerName jenkins4.davenport.edu
+        ServerAlias jenkins4
+
+        DocumentRoot /var/www/html
+        <Directory /var/www/html>
+                Allow from all
+        </Directory>
+
+
+        SSLEngine on
+        SSLProtocol all -SSLv2 -SSLv3
+        SSLHonorCipherOrder On
+        SSLCipherSuite ALL:!EXP:!NULL:!ADH:!LOW:!SSLv2:!MD5:!RC4
+        SSLCertificateFile /etc/pki/tls/certs/davenport.edu.crt
+        SSLCertificateKeyFile /etc/pki/tls/private/davenport.edu.key
+        SSLCertificateChainFile /etc/pki/tls/certs/gd_bundle-g2-g1.crt
+
+        ProxyRequests Off
+        ProxyPreserveHost On
+        AllowEncodedSlashes NoDecode
+    <Proxy *>
+        Order deny,allow
+        Allow from all
+    </Proxy>
+        ProxyPass /files/ !
+        ProxyPass / http://localhost:8080/ nocanon
+        ProxyPassReverse / http://localhost:8080/
+        ProxyPassReverse / http://jenkins4.davenport.edu/
+    	RequestHeader set X-Forwarded-Proto "https"
+   	RequestHeader set X-Forwarded-Port "443"
+</VirtualHost>
